@@ -1,4 +1,4 @@
-package bkdtree
+package kdtree
 
 import (
 	"encoding/json"
