@@ -1,9 +1,7 @@
 package bkdtree
 
 import (
-	"bytes"
 	"math/rand"
-	"os"
 	"testing"
 )
 
@@ -53,36 +51,6 @@ type CaseCodec struct {
 	bytesP      []byte
 }
 
-func TestPointCodec(t *testing.T) {
-	cases := []CaseCodec{
-		{
-			Point{[]uint64{6, 92, 68}, 8},
-			3,
-			4,
-			[]byte{0x0, 0x0, 0x0, 0x6, 0x0, 0x0, 0x0, 0x5c, 0x0, 0x0, 0x0, 0x44, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x8},
-		},
-		{
-			Point{[]uint64{6, 92, 68}, 256},
-			3,
-			4,
-			[]byte{0x0, 0x0, 0x0, 0x6, 0x0, 0x0, 0x0, 0x5c, 0x0, 0x0, 0x0, 0x44, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0},
-		},
-	}
-
-	var point Point
-	for i, tc := range cases {
-		b := make([]byte, tc.numDims*tc.bytesPerDim+8)
-		tc.point.Encode(b, tc.bytesPerDim)
-		if !bytes.Equal(b, tc.bytesP) {
-			t.Fatalf("point %d Encode as %v", i, b)
-		}
-		point.Decode(tc.bytesP, tc.numDims, tc.bytesPerDim)
-		if !point.Equal(tc.point) {
-			t.Fatalf("point %d Decode as %v", i, point)
-		}
-	}
-}
-
 func NewRandPoints(numDims int, maxVal uint64, size int) (points []Point) {
 	for i := 0; i < size; i++ {
 		vals := make([]uint64, 0, numDims)
@@ -93,33 +61,6 @@ func NewRandPoints(numDims int, maxVal uint64, size int) (points []Point) {
 		points = append(points, point)
 	}
 	return
-}
-
-func TestPointArrayExt_ToMem(t *testing.T) {
-	numDims := 3
-	maxVal := uint64(100)
-	size := 10000
-	points := NewRandPoints(numDims, maxVal, size)
-	pam := PointArrayMem{
-		points: points,
-		byDim:  1,
-	}
-
-	bytesPerDim := 4
-	pae := pam.ToExt(bytesPerDim)
-	pam2 := pae.ToMem()
-	if pam.byDim != pam2.byDim {
-		t.Fatalf("point array meta info changes after convertion")
-	}
-	if len(pam.points) != len(pam2.points) {
-		t.Fatalf("point array length changes after convertion: %d %d", len(pam.points), len(pam2.points))
-	}
-	for i := 0; i < len(pam.points); i++ {
-		p1, p2 := pam.points[i], pam2.points[i]
-		if !p1.Equal(p2) {
-			t.Fatalf("point %d changes after convertion: %v %v", i, p1, p2)
-		}
-	}
 }
 
 //verify if lhs and rhs contains the same points. order doesn't matter.
@@ -191,7 +132,6 @@ func TestSplitPoints(t *testing.T) {
 	points := NewRandPoints(numDims, maxVal, size)
 	pointsSaved := make([]Point, size)
 	copy(pointsSaved, points)
-	//test SplitPoints(PointArrayMem)
 	for dim := 0; dim < numDims; dim++ {
 		pam := &PointArrayMem{
 			points: points,
@@ -200,49 +140,6 @@ func TestSplitPoints(t *testing.T) {
 		splitValues, splitPoses := SplitPoints(pam, numStrips)
 		verifySplit(t, pam, numStrips, splitValues, splitPoses)
 		if !areSmaePoints(pointsSaved, pam.points, numDims) {
-			t.Fatalf("point set changes after split")
-		}
-	}
-
-	//test SplitPoints(PointArrayExt)
-	bytesPerDim := 4
-	pam := &PointArrayMem{
-		points: points,
-		byDim:  0,
-	}
-	pae := pam.ToExt(bytesPerDim)
-	for dim := 0; dim < numDims; dim++ {
-		pae.byDim = dim
-		splitValues, splitPoses := SplitPoints(pae, numStrips)
-		pam2 := pae.ToMem()
-		verifySplit(t, pam2, numStrips, splitValues, splitPoses)
-		if !areSmaePoints(pam.points, pam2.points, numDims) {
-			t.Fatalf("point set changes after split")
-		}
-	}
-
-	//test SplitPoints(PointArrayExt) on external temp file
-	tmpF, err := os.OpenFile("/tmp/point_test", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		t.Fatalf("%+v", err)
-	}
-	defer tmpF.Close()
-	_, err = tmpF.Write(pae.data)
-	if err != nil {
-		t.Fatalf("%+v", err)
-	}
-	data, err := FileMmap(tmpF)
-	if err != nil {
-		t.Fatalf("%+v", err)
-	}
-	defer FileMunmap(data)
-	pae.data = data
-	for dim := 0; dim < numDims; dim++ {
-		pae.byDim = dim
-		splitValues, splitPoses := SplitPoints(pae, numStrips)
-		pam2 := pae.ToMem()
-		verifySplit(t, pam2, numStrips, splitValues, splitPoses)
-		if !areSmaePoints(pam.points, pam2.points, numDims) {
 			t.Fatalf("point set changes after split")
 		}
 	}
