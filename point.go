@@ -1,4 +1,4 @@
-package bkdtree
+package kdtree
 
 import (
 	"sort"
@@ -24,15 +24,6 @@ type PointArray interface {
 type PointArrayMem struct {
 	points []Point
 	byDim  int
-}
-
-type PointArrayExt struct {
-	data        []byte
-	numPoints   int
-	byDim       int
-	bytesPerDim int
-	numDims     int
-	pointSize   int
 }
 
 // Compare is part of datastructures.Comparable interface

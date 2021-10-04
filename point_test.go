@@ -1,4 +1,4 @@
-package bkdtree
+package kdtree
 
 import (
 	"math/rand"
@@ -42,13 +42,6 @@ func TestIsInside(t *testing.T) {
 			t.Fatalf("case %v failed\n", i)
 		}
 	}
-}
-
-type CaseCodec struct {
-	point       Point
-	numDims     int
-	bytesPerDim int
-	bytesP      []byte
 }
 
 func NewRandPoints(numDims int, maxVal uint64, size int) (points []Point) {
@@ -120,7 +113,6 @@ func verifySplit(t *testing.T, pam *PointArrayMem, numStrips int, splitValues []
 			}
 		}
 	}
-	return
 }
 
 func TestSplitPoints(t *testing.T) {
