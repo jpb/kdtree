@@ -9,7 +9,7 @@ import (
 
 type Point struct {
 	Vals     []uint64
-	UserData uint64
+	UserData interface{}
 }
 
 type PointArray interface {
@@ -43,7 +43,14 @@ func (p Point) Compare(other datastructures.Comparable) int {
 			return int(p.Vals[dim] - rhs.Vals[dim])
 		}
 	}
-	return int(p.UserData - rhs.UserData)
+
+	if pc, ok := p.UserData.(datastructures.Comparable); ok {
+		if rhsc, ok := rhs.UserData.(datastructures.Comparable); ok {
+			return pc.Compare(rhsc)
+		}
+	}
+
+	return 0
 }
 
 func (p *Point) Inside(lowPoint, highPoint Point) (isInside bool) {
@@ -62,7 +69,14 @@ func (p Point) LessThan(rhs Point) (res bool) {
 			return p.Vals[dim] < rhs.Vals[dim]
 		}
 	}
-	return p.UserData < rhs.UserData
+
+	if pc, ok := p.UserData.(datastructures.Comparable); ok {
+		if rhsc, ok := rhs.UserData.(datastructures.Comparable); ok {
+			return pc.Compare(rhsc) < 0
+		}
+	}
+
+	return false
 }
 
 func (p *Point) Equal(rhs Point) (res bool) {
